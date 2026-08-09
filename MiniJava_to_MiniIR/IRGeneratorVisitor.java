@@ -17,6 +17,9 @@ public class IRGeneratorVisitor extends GJDepthFirst<IRGeneratorVisitor.IRInfo, 
     private Map<String, Integer> varToTempMap = new HashMap<>();
     private Map<String, String> vTablePtrs = new HashMap<>();
 
+    private static final int GLOBAL_VTABLE_BASE = 0x10010000;
+    private Map<String, Integer> globalVTableAddr = new HashMap<>();
+
     private int lambdaCounter = 0;
 
     public IRGeneratorVisitor(SymbolTableVisitor.SymbolTable st, Map<Node, SymbolTableVisitor.ClassInfo> lambdaClassMap) {
@@ -49,6 +52,12 @@ public class IRGeneratorVisitor extends GJDepthFirst<IRGeneratorVisitor.IRInfo, 
                 VTCode.append("MOVE ").append(labelTemp).append(" ").append(methodLabel).append("\n");
                 VTCode.append("HSTORE ").append(vTablePtr).append(" ").append(offset).append(" ").append(labelTemp).append("\n");
             }
+
+            int globalAddr = GLOBAL_VTABLE_BASE + 4 * globalVTableAddr.size();
+            globalVTableAddr.put(className, globalAddr);
+            String addrTemp = newTemp();
+            VTCode.append("MOVE ").append(addrTemp).append(" ").append(globalAddr).append("\n");
+            VTCode.append("HSTORE ").append(addrTemp).append(" 0 ").append(vTablePtr).append("\n");
         }
         return VTCode.toString();
     }
@@ -254,7 +263,12 @@ public class IRGeneratorVisitor extends GJDepthFirst<IRGeneratorVisitor.IRInfo, 
         String objPtr = newTemp();
         StringBuilder code = new StringBuilder();
         code.append("MOVE ").append(objPtr).append(" HALLOCATE ").append(objectSize).append("\n");
-        String vTableTemp = vTablePtrs.get(className);
+
+        Integer globalAddr = globalVTableAddr.get(className);
+        String addrTemp = newTemp();
+        String vTableTemp = newTemp();
+        code.append("MOVE ").append(addrTemp).append(" ").append(globalAddr).append("\n");
+        code.append("HLOAD ").append(vTableTemp).append(" ").append(addrTemp).append(" 0\n");
         code.append("HSTORE ").append(objPtr).append(" 0 ").append(vTableTemp).append("\n");
         String zeroTemp = newTemp();
         code.append("MOVE ").append(zeroTemp).append(" 0\n");
