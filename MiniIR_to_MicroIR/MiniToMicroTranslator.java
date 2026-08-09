@@ -6,6 +6,15 @@ public class MiniToMicroTranslator extends GJDepthFirst<String, Void> {
     private final StringBuilder out = new StringBuilder();
     private int tempI = 200;
 
+    private String ensureTemp(String s) {
+        if (s.startsWith("TEMP ")) {
+            return s;
+        }
+        String t = creatingTemp();
+        append("MOVE " + t + " " + s);
+        return t;
+    }
+
     private void append(String line) {
         out.append(line).append("\n");
     }
@@ -124,7 +133,7 @@ public class MiniToMicroTranslator extends GJDepthFirst<String, Void> {
         if (ChoiceExp instanceof BinOp) {
             BinOp op = (BinOp) ChoiceExp;
             String StringOp = op.f0.accept(this, argu);
-            String left = op.f1.accept(this, argu);
+            String left = ensureTemp(op.f1.accept(this, argu));
             String right = op.f2.accept(this, argu);
             append("MOVE " + dest + " " + StringOp + " " + left + " " + right);
         } else if (ChoiceExp instanceof Call) {
@@ -191,7 +200,7 @@ public class MiniToMicroTranslator extends GJDepthFirst<String, Void> {
     @Override
     public String visit(BinOp n, Void argu) {
         String op = n.f0.accept(this, argu);
-        String left = n.f1.accept(this, argu);
+        String left = ensureTemp(n.f1.accept(this, argu));
         String right = n.f2.accept(this, argu);
         String res = creatingTemp();
         append("MOVE " + res + " " + op + " " + left + " " + right);
